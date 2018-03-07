@@ -1,3 +1,5 @@
+#! python3.6
+
 # urls:
 # xxx.fm
 # xxx.001   [++]
@@ -9,32 +11,34 @@
 # Caution: Seems to cause HANSER-eLibrary to block your IP if used excessively
 
 # TODO
-#	--Funktional:	
-#	else in while to signal end of index reached before end of chapters
+# --Funktional:
+# else in while to signal end of index reached before end of chapters
 #
-#	--Refactoring:
-# 	better constants?
-#       move "blocked" message out of download, DRY
+# --Refactoring:
+#  better constants?
+#  move "blocked" message out of download, DRY
 #
 
 # Python Packages
-from timeit import default_timer as timer  # used to time individual segments
 import pathlib  # used to join paths independent of OS (not used) and make directories
-import tempfile
 import shutil
+import tempfile
+from timeit import default_timer as timer  # used to time individual segments
 
 # External Packages
 import requests  # web requests
-from PyPDF2 import PdfFileMerger  # merge pdfs
+import urllib3
+from PyPDF2 import PdfFileMerger, utils  # merge pdfs
 
 # ------- CONSTANTS ---------
 
 source_url = "http://www.hanser-elibrary.com/doi/pdf/10.3139/"
-max_chapters = 999      # syntactic end due to 3-digit url
+max_chapters = 999  # syntactic end due to 3-digit url
 
 headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) \
 Chrome/53.0.2785.143 Safari/537.36'}
-timeout = 30        # seems to only get a response with the whole pdf, extend timeout accordingly
+timeout = 30  # seems to only get a response with the whole pdf, extend timeout accordingly
+
 
 # ---------- FUNCTIONS --------
 
@@ -47,12 +51,12 @@ def load_file(url, file_name, history=None):
     if r.status_code != 200:
         print("Error Code {}, file {} not loaded".format(r.status_code, file_name))
         r.close()
-        if (r.status_code == 404):
+        if r.status_code == 404:
             raise FileNotFoundError()
 
-        if (r.status_code == 403):
+        if r.status_code == 403:
             raise ConnectionRefusedError()
-        
+
     with open(file_name, 'wb+') as f:
         f.write(r.content)
         # f.close()  # clean up managed by "with"
@@ -60,6 +64,8 @@ def load_file(url, file_name, history=None):
             history.append(file_name)
 
     r.close()
+
+
 # end
 
 
@@ -92,19 +98,20 @@ def load_book(book_id, path, history):
         except FileNotFoundError:
             print("End of Chapters found.")
             break
-    
+
     # load outro (.bm)
     print("Loading Outro")
     url = book_url + '.bm'
+
     try:
         load_file(url, path + 'outro.pdf', history)
 
     except FileNotFoundError:
         print("Can't load Outro, that's a weird one.")
     except:
-        print ("Loading Outro failed")
+        print("Loading Outro failed")
         raise
-        
+
 
 def bind(file_list, target_file):
     """binds multiple pdf segments into one big pdf."""
@@ -131,21 +138,21 @@ def main():
     # if you load into different folders, you only have yourself to blame
     folder = input("Insert folder to load PDFs into:\n>U:\\ChapterLoader<\n> ")
 
-    while True:     # broken through "exit()"
+    while True:  # broken through "exit()"
 
         book_id = input("Insert Book-ID:\n>.../book/10.3139/XXXXXX<\n> ")
 
         if folder == "" or book_id == "":
             print("well if you don't want to play, I won't play either!")
-            return 
+            return
 
-        temp_path = tempfile.gettempdir()   # used to speed up binding & make cleanup easier
+        temp_path = tempfile.gettempdir()  # used to speed up binding & make cleanup easier
 
         path = temp_path + "\\" + book_id + "\\"
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True)   # temporary work dir
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)  # temporary work dir
 
         pathlib.Path(folder + "\\").mkdir(parents=True, exist_ok=True)  # final target folder
-        
+
         t_start = timer()
         history = []
 
@@ -159,7 +166,7 @@ def main():
         # bind PDFs to book
         print("Starting to bind chapter PDFs to one book...")
 
-        bind_target = temp_path + "\\" + book_id + ".pdf"  # TODO: change to temp path
+        bind_target = temp_path + "\\" + book_id + ".pdf"
         bind(history, bind_target)
 
         t_binding = timer()
@@ -172,8 +179,8 @@ def main():
 
         # copy to destination folder
         target_file = folder + "\\" + book_id + ".pdf"
-        print ("Moving {} to {}".format(bind_target, target_file))
-        shutil.move(bind_target, target_file)       # can't make dir
+        print("Moving {} to {}".format(bind_target, target_file))
+        shutil.move(bind_target, target_file)  # can't make dir
 
         t_finishing = timer()
         print("...Cleanup done, time: {} sec".format(t_finishing - t_binding))
@@ -181,6 +188,7 @@ def main():
         print("All done, overall time: {} sec".format(t_binding - t_start))
 
     # end of repeatition here
+
 
 # end of main
 
@@ -195,5 +203,5 @@ if __name__ == "__main__":
         print("You have been blocked, try in 2 hours")
     except urllib3.exceptions.ConnectTimeoutError:
         print("Connection has timed out, is your timeout too small?")
-
-
+    except utils.PdfReadError as e:
+        print("An Error occured during binding of the book:" + str(e))
