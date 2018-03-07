@@ -9,7 +9,7 @@
 
 # TODO
 #	--Funktional:	
-#	enable looping of main routine, re-input only book_id
+#	else in while to signal end of chapters
 #
 #	--Refactoring:
 # 	better constants?
@@ -28,7 +28,7 @@ from PyPDF2 import PdfFileMerger  # merge pdfs
 # ------- CONSTANTS ---------
 
 source_url = "http://www.hanser-elibrary.com/doi/pdf/10.3139/"
-max_chapters = 50
+max_chapters = 100
 
 
 # ---------- FUNCTIONS --------
@@ -41,7 +41,7 @@ def load_file(url, file_name, history=None):
     if r.status_code != 200:
         print("Error Code {}, file {} not loaded".format(r.status_code, file_name))
         r.close()
-        raise FileNotFoundError("404")
+        raise FileNotFoundError("Code" + str(r.status_code))
 
     with open(file_name, 'wb+') as f:
         f.write(r.content)
@@ -68,7 +68,7 @@ def load_book(book_id, path, history):
         print("Can't load Intro, URL wrong?\nURL: " + url)
         exit(404)
     # load numbers until 404
-    print("Loading all possible Chapters")
+    print("Successful, now loading all possible Chapters")
     for i in range(1, max_chapters):  # do until error -> "for" nur als timeout
         chapter = str(i).rjust(3, '0')  # 007
 
@@ -88,7 +88,8 @@ def load_book(book_id, path, history):
         load_file(url, path + 'outro.pdf', history)
 
     except FileNotFoundError:
-        print("Can't find Outro, that's a weird one")
+        print("Can't load Outro, you have probably been blocked")
+        exit(403)
 
 
 def bind(file_list, target_file):
@@ -113,57 +114,59 @@ def main():
     Don't try to challenge it, it is challenged enough on it's own.\n\n")
     print("If this tool stops working, chances are you have been blocked by Hanser")
 
-    folder = input("Insert folder to load PDFs into:\n>U:\\ChapterLoader<\n>")
+    folder = input("Insert folder to load PDFs into:\n>U:\\ChapterLoader<\n> ")
 
-    # TODO: repeat here
+    while True:     # broken through "exit()"
 
-    book_id = input("Insert Book-ID:\n>.../book/10.3139/XXXXXX<\n>")
+        book_id = input("Insert Book-ID:\n>.../book/10.3139/XXXXXX<\n> ")
 
-    if folder == "" or book_id == "":
-        print("well if you don't want to play, I won't play either!")
-        exit(1)
+        if folder == "" or book_id == "":
+            print("well if you don't want to play, I won't play either!")
+            exit(1)
 
-    temp_path = tempfile.gettempdir()
+        temp_path = tempfile.gettempdir()
 
-    path = temp_path + "\\" + book_id + "\\"   # TODO: change folder to temp path?
-    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        path = temp_path + "\\" + book_id + "\\"
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
-    t_start = timer()
-    history = []
+        pathlib.Path(folder + "\\").mkdir(parents=True, exist_ok=True)
+        
+        t_start = timer()
+        history = []
 
-    print("Starting download...")
+        print("Starting download...")
 
-    load_book(book_id, path, history)
+        load_book(book_id, path, history)
 
-    t_download = timer()
-    print("...Download done, time: {} sec".format(t_download - t_start))
+        t_download = timer()
+        print("...Download done, time: {} sec".format(t_download - t_start))
 
-    # bind PDFs to book
-    print("Starting to bind chapter PDFs to one book...")
-    # print (history)
+        # bind PDFs to book
+        print("Starting to bind chapter PDFs to one book...")
+        # print (history)
 
-    bind_target = temp_path + "\\" + book_id + ".pdf"  # TODO: change to temp path
-    bind(history, bind_target)
+        bind_target = temp_path + "\\" + book_id + ".pdf"  # TODO: change to temp path
+        bind(history, bind_target)
 
-    t_binding = timer()
-    print("...Binding done, time: {} sec".format(t_binding - t_download))
+        t_binding = timer()
+        print("...Binding done, time: {} sec".format(t_binding - t_download))
 
-    # finishing
-    print("Cleaning up...")
+        # finishing
+        print("Cleaning up...")
 
-    # TODO: Delete tmp
+        # TODO: Delete tmp
 
-    # copy to destination folder
-    target_file = folder + "\\" + book_id + ".pdf"
-    print ("Moving {} to {}".format(bind_target, target_file))
-    shutil.move(bind_target, target_file)
+        # copy to destination folder
+        target_file = folder + "\\" + book_id + ".pdf"
+        print ("Moving {} to {}".format(bind_target, target_file))
+        shutil.move(bind_target, target_file)       # makes dir if not existent
 
-    t_finishing = timer()
-    print("...Cleanup done, time: {} sec".format(t_finishing - t_binding))
+        t_finishing = timer()
+        print("...Cleanup done, time: {} sec".format(t_finishing - t_binding))
 
-    print("All done, overall time: {} sec".format(t_binding - t_start))
+        print("All done, overall time: {} sec".format(t_binding - t_start))
 
-    # TODO: end repeat here
+    # end of repeatition here
 
 # end of main
 
