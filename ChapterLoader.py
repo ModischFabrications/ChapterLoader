@@ -11,12 +11,15 @@
 # Caution: Seems to cause HANSER-eLibrary to block your IP if used excessively
 
 # TODO
+# --Generic:
+# find out why Hanser blocks while having human-like access structure
+#
 # --Funktional:
-# else in while to signal end of index reached before end of chapters
+# replace pdfrw with functionality from PyPDF2 to limit requirements
+# improve error handling with special cases
 #
 # --Refactoring:
 #  better constants?
-#  move "blocked" message out of download, DRY
 #
 
 # Python Packages
@@ -29,6 +32,7 @@ from timeit import default_timer as timer  # used to time individual segments
 import requests  # web requests
 import urllib3
 from PyPDF2 import PdfFileMerger, utils  # merge pdfs
+from pdfrw import PdfReader     # used to determine title from intro
 
 # ------- CONSTANTS ---------
 
@@ -84,6 +88,11 @@ def load_book(book_id, path, history):
         print("Can't load Intro, URL wrong?\nURL: {}".format(url))
         raise
 
+    # extract title from intro to name final document
+    title = str(PdfReader(path + 'intro.pdf').Info.Title)
+    title = title.strip('()')   # cut off Brackets surrounding titles
+    print("Extracted Title: " + title)
+    
     # load numbers until 404
     print("Successful, now loading all possible Chapters")
     for i in range(1, max_chapters):  # do until error -> "for" nur als timeout
@@ -112,6 +121,7 @@ def load_book(book_id, path, history):
         print("Loading Outro failed")
         raise
 
+    return title
 
 def bind(file_list, target_file):
     """binds multiple pdf segments into one big pdf."""
@@ -158,7 +168,7 @@ def main():
 
         print("Starting download...")
 
-        load_book(book_id, path, history)
+        title = load_book(book_id, path, history)
 
         t_download = timer()
         print("...Download done, time: {} sec".format(t_download - t_start))
@@ -178,7 +188,7 @@ def main():
         # TODO: Delete tmp
 
         # copy to destination folder
-        target_file = folder + "\\" + book_id + ".pdf"
+        target_file = folder + "\\" + title + ".pdf"
         print("Moving {} to {}".format(bind_target, target_file))
         shutil.move(bind_target, target_file)  # can't make dir
 
