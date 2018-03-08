@@ -15,12 +15,25 @@
 # find out why Hanser blocks while having human-like access structure
 #
 # --Funktional:
-# replace pdfrw with functionality from PyPDF2 to limit requirements
 # improve error handling with special cases
+#
+# replace pdfrw with functionality from PyPDF2 to limit requirements
+# check header of file to validate PDF (fixes "Login to download" bug)
+# http://www.easymetadata.com/2014/11/fun-with-python-extracting-pdf-metadata/
+#
+# check inputs
+# format input paths to allow trailing "\"
 #
 # --Refactoring:
 #  better constants?
 #
+
+# Known Bugs:
+#
+# occasionally the connection is refused without being blocked
+# downloading without eduroam loads HTML with "Login to download"
+# get(pdf) can cause a timeout with large documents -> temp fix: t = 30
+# 
 
 # Python Packages
 import pathlib  # used to join paths independent of OS (not used) and make directories
