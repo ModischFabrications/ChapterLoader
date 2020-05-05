@@ -1,4 +1,4 @@
-# ChapterLoader
+# HanserLoader
 Like downloading individual chapter PDFs from Hanser e-Library? Me neither. 
 
 This is a simple tool to load, bind and export books automatically.

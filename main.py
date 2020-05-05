@@ -45,14 +45,16 @@ timeout = 30  # seems to only get a response with the whole pdf, extend timeout 
 
 # command line arguments
 def setup_args() -> Tuple[str, Path, int]:
-    # "http://www.hanser-elibrary.com/doi/pdf/10.3139/"
-    parser = argparse.ArgumentParser(description='Download books from hanser e library as a combined PDF')
-    parser.add_argument("-b", "--book", required=True, help="/book/10.3139/XXXXXX")
-    parser.add_argument("-d", "--dir", default=Path("./books"), type=Path)
-    parser.add_argument("-m", "--max_chapters", default=999, type=int)
+    parser = argparse.ArgumentParser(description='Download books from hanser e-library as a combined PDF')
+    parser.add_argument("-b", "--book", required=True,
+                        help="Last segment of url, looks like this: /book/10.3139/XXXXXX")
+    parser.add_argument("-d", "--dir", default=Path("./books"), type=Path,
+                        help="directory to save book to, default is current directory")
+    # parser.add_argument("-m", "--max_chapters", default=999, type=int)      # useless?
 
     # read args
     args = parser.parse_args()
+    args.max_chapters = 999
 
     if args.book == "":
         raise AttributeError("Missing URL")
