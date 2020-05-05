@@ -30,13 +30,11 @@ from typing import Tuple, List, Union
 
 import requests  # web requests
 import urllib3
-from PyPDF2 import PdfFileMerger, utils  # merge pdfs
-from pdfrw import PdfReader  # used to determine title from intro
+from PyPDF2 import PdfFileMerger, utils, PdfFileReader  # merge pdfs
 
 # ------- CONSTANTS ---------
 
 source_url = "https://www.hanser-elibrary.com/doi/pdf/10.3139/"
-max_chapters = 3  # 999  # syntactic end due to 3-digit url
 
 headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) \
 Chrome/53.0.2785.143 Safari/537.36'}
@@ -46,11 +44,12 @@ timeout = 30  # seems to only get a response with the whole pdf, extend timeout 
 # ---------- FUNCTIONS --------
 
 # command line arguments
-def setup_args() -> Tuple[str, Path]:
+def setup_args() -> Tuple[str, Path, int]:
     # "http://www.hanser-elibrary.com/doi/pdf/10.3139/"
     parser = argparse.ArgumentParser(description='Download books from hanser e library as a combined PDF')
     parser.add_argument("-b", "--book", required=True, help="/book/10.3139/XXXXXX")
     parser.add_argument("-d", "--dir", default=Path("./books"), type=Path)
+    parser.add_argument("-m", "--max_chapters", default=999, type=int)
 
     # read args
     args = parser.parse_args()
@@ -59,8 +58,11 @@ def setup_args() -> Tuple[str, Path]:
         raise AttributeError("Missing URL")
     if args.dir == "":
         raise AttributeError("Missing directory")
+    # 999 is syntactic end due to 3-digit url
+    if args.max_chapters <= 0 or args.max_chapters > 999:
+        raise AttributeError("invalid max_chapters")
 
-    return str(args.book), Path(args.dir)
+    return str(args.book), Path(args.dir), int(args.max_chapters)
 
 
 def load_file(url: str, file_name: Path, history: Union[List, None]):
@@ -87,8 +89,8 @@ def load_file(url: str, file_name: Path, history: Union[List, None]):
     r.close()
 
 
-def load_book(book_id: str, path: Path, history: Union[List, None]):
-    """starts downloading the provided book. """
+def load_book(book_id: str, path: Path, max_chapters: int, history: Union[List, None]):
+    """starts downloading the provided book.  """
 
     print(f"Downloading book with ID {book_id}\ninto folder {path} ...")
     book_url = source_url + book_id
@@ -104,8 +106,9 @@ def load_book(book_id: str, path: Path, history: Union[List, None]):
         raise
 
     # extract title from intro to name final document
-    title = str(PdfReader(str(intro_pdf)).Info.Title)
-    title = title.strip('()')  # cut off Brackets surrounding titles
+    with intro_pdf.open("rb") as intro:
+        pdf_reader = PdfFileReader(intro)
+        title = pdf_reader.documentInfo.title
     print("Extracted Title: " + title)
 
     # load numbers until 404
@@ -154,7 +157,7 @@ def bind(file_list: List[Path], target_file: Path):
     merger.close()
 
 
-def get_book(book_id: str, dest_dir: Path, temp_dir: Path):
+def get_book(book_id: str, dest_dir: Path, temp_dir: Path, max_chapters):
     t_start = timer()
     history = []
 
@@ -162,7 +165,7 @@ def get_book(book_id: str, dest_dir: Path, temp_dir: Path):
     Path(temp_book_dir).mkdir(parents=True, exist_ok=True)  # temporary work dir
 
     print("Starting download...")
-    title = load_book(book_id, temp_book_dir, history)
+    title = load_book(book_id, temp_book_dir, max_chapters, history)
     t_download = timer()
     print("...Download done, time: {} sec".format(t_download - t_start))
 
@@ -190,14 +193,14 @@ def main():
     print("\nWelcome to ChapterLoader, usage is at own risk.")
     print("If this tool stops working, chances are you have been blocked by Hanser")
 
-    book_id, folder = setup_args()
+    book_id, folder, max_chapters = setup_args()
 
     # ensure that target folder exists
     Path(folder).mkdir(parents=True, exist_ok=True)
 
     temp_path = Path(tempfile.gettempdir())  # used to speed up binding & make cleanup easier
 
-    get_book(book_id, folder, temp_path)
+    get_book(book_id, folder, temp_path, max_chapters)
 
 
 # ------

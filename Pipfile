@@ -9,7 +9,6 @@ verify_ssl = true
 requests = "*"
 urllib3 = "*"
 pypdf2 = "*"
-pdfrw = "*"
 
 [requires]
 python_version = "3.7"
