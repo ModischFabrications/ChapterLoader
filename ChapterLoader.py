@@ -157,23 +157,23 @@ def bind(file_list: List[Path], target_file: Path):
     merger.close()
 
 
-def get_book(book_id: str, dest_dir: Path, temp_dir: Path, max_chapters):
+def get_book(book_id: str, dest_dir: Path, temp_dir: Path, max_chapters: int):
     t_start = timer()
     history = []
 
     temp_book_dir = temp_dir / book_id
     Path(temp_book_dir).mkdir(parents=True, exist_ok=True)  # temporary work dir
 
-    print("Starting download...")
+    print(f"Starting download of {book_id}...")
     title = load_book(book_id, temp_book_dir, max_chapters, history)
     t_download = timer()
-    print("...Download done, time: {} sec".format(t_download - t_start))
+    print(f"...Download done, time: {t_download - t_start:.2f} sec")
 
     print("Starting to bind chapter PDFs into a book...")
     temp_bind_file = temp_dir / (book_id + ".pdf")
     bind(history, temp_bind_file)
     t_binding = timer()
-    print(f"...Binding done, time: {t_binding - t_download} sec")
+    print(f"...Binding done, time: {t_binding - t_download:.2f} sec")
 
     dest_file = dest_dir / (title + ".pdf")
     print(f"Moving {temp_bind_file} to {dest_file}")
@@ -181,10 +181,8 @@ def get_book(book_id: str, dest_dir: Path, temp_dir: Path, max_chapters):
 
     print("Cleaning up...")
     shutil.rmtree(temp_book_dir)
-    t_finishing = timer()
-    print(f"...Cleanup done, time: {t_finishing - t_binding} sec")
 
-    print(f"{book_id} is done, overall time: {t_binding - t_start} sec")
+    print(f"{book_id} is done, overall time: {t_binding - t_start:.2f} sec")
 
 
 # -- MAIN --
